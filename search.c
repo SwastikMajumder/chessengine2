@@ -15,7 +15,7 @@
 /** Skeletal representation of all the functions in the program **/
 
 /* Search positions in the game using alpha beta pruning */
-SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, SCORE, GAME_PHASE_VALUE, int, int, PV *, UCI_DATA *);
+SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *);
 
 
 /** Illegal moves **/
@@ -53,19 +53,16 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
 
 #define SEARCH(board, enPassant, castling, \
                color, quiescence, alpha, beta, bestValue,  \
-               middleGameVaule, endGameValue, gamePhaseValue, \
-               middleGameEvaluation, endGameEvaluation, gamePhaseEvaluation, \
+               gameValue, \
+               gameEvaluation, \
                depth, \
                ply, pv, pvChild, uciData, \
                pvParam){ \
                \
   int value = -negamax((board), (enPassant), (castling), \
                        !(color), (quiescence), -(*(beta)), -(*(alpha)), \
-                       (color) == WHITE ? (middleGameValue) - (middleGameEvaluation) : \
-                                          (middleGameValue) + (middleGameEvaluation), \
-                       (color) == WHITE ? (endGameValue) - (endGameEvaluation) : \
-                                          (endGameValue) + (endGameEvaluation), \
-                       (gamePhaseValue) + (gamePhaseEvaluation), \
+                       (color) == WHITE ? (gameValue) - (gameEvaluation) : \
+                                          (gameValue) + (gameEvaluation), \
                        (depth), \
                         (ply) + 1, &(pvChild), (uciData)); \
   if (value > *(bestValue)){ \
@@ -129,7 +126,7 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
 
 SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,                                        /* The board and rights */
               COLOR color, BITBOARD quiescence, SCORE alpha, SCORE beta,                                  /* Search */
-              SCORE middleGameValue, SCORE endGameValue, GAME_PHASE_VALUE gamePhaseValue,                 /* Evaluation */
+              SCORE gameValue,
               int depth, int ply,                                                                         /* Depth */
               PV *pv, UCI_DATA *uciData){                                                                 /* Data */
 
@@ -161,9 +158,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
 
     /* Score is always positive for black */
     return (color == WHITE ? -1 : 1) *                                                                    /* Return relative score */
-           ((currentGamePhase(gamePhaseValue) == MIDDLE_GAME ? middleGameValue                            /* If middle game return middle game value */
-                                                             : endGameValue)                              /* If end game return end game value */
-            + evaluation(board, gamePhaseValue));                                                         /* Special evaluation */
+           gameValue;
   }
 
 
@@ -200,19 +195,15 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
                  color, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionCaptureEvaluation(QUEEN, color, MIDDLE_GAME, pieceTypeTo, fromIndex, toIndex),
-                 promotionCaptureEvaluation(QUEEN, color, MIDDLE_GAME, pieceTypeTo, fromIndex, toIndex),
-                 promotionCaptureGamePhaseEvaluation(QUEEN, pieceTypeTo),
+                 gameValue,
+                 promotionCaptureEvaluation(QUEEN, color, pieceTypeTo, fromIndex, toIndex),
                  1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         } else {
           SEARCH(board, NO_MOVE, NO_MOVE,
                  color, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionCaptureEvaluation(QUEEN, color, MIDDLE_GAME, pieceTypeTo, fromIndex, toIndex),
-                 promotionCaptureEvaluation(QUEEN, color, MIDDLE_GAME, pieceTypeTo, fromIndex, toIndex),
-                 promotionCaptureGamePhaseEvaluation(QUEEN, pieceTypeTo),
+                 gameValue,
+                 promotionCaptureEvaluation(QUEEN, color, pieceTypeTo, fromIndex, toIndex),
                  depth - 1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         }
@@ -230,19 +221,15 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
                  WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionMovementEvaluation(QUEEN, WHITE, MIDDLE_GAME, fromIndex, toIndex),
-                 promotionMovementEvaluation(QUEEN, WHITE, END_GAME, fromIndex, toIndex),
-                 promotionMovementGamePhaseEvaluation(QUEEN),
+                 gameValue,
+                 promotionMovementEvaluation(QUEEN, WHITE, fromIndex, toIndex),
                  1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         } else {
           SEARCH(board, NO_MOVE, NO_MOVE,
                  WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionMovementEvaluation(QUEEN, WHITE, MIDDLE_GAME, fromIndex, toIndex),
-                 promotionMovementEvaluation(QUEEN, WHITE, END_GAME, fromIndex, toIndex),
-                 promotionMovementGamePhaseEvaluation(QUEEN),
+                 gameValue,
+                 promotionMovementEvaluation(QUEEN, WHITE, fromIndex, toIndex),
                  depth - 1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         }
@@ -259,19 +246,15 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
                  BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionMovementEvaluation(QUEEN, BLACK, MIDDLE_GAME, fromIndex, toIndex),
-                 promotionMovementEvaluation(QUEEN, BLACK, END_GAME, fromIndex, toIndex),
-                 promotionMovementGamePhaseEvaluation(QUEEN),
+                 gameValue,
+                 promotionMovementEvaluation(QUEEN, BLACK, fromIndex, toIndex),
                  1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         } else {
           SEARCH(board, NO_MOVE, NO_MOVE,
                  BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 promotionMovementEvaluation(QUEEN, BLACK, MIDDLE_GAME, fromIndex, toIndex),
-                 promotionMovementEvaluation(QUEEN, BLACK, END_GAME, fromIndex, toIndex),
-                 promotionMovementGamePhaseEvaluation(QUEEN),
+                 gameValue,
+                 promotionMovementEvaluation(QUEEN, BLACK, fromIndex, toIndex),
                  depth - 1, ply, pv, pvChild, uciData,
                  { PV_PARAM_PROMOTION(fromIndex, toIndex) });
         }
@@ -309,19 +292,14 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
                  color, ~to, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                 captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                 captureGamePhaseEvaluation(pieceTypeTo),
+                 gameValue,
+                 captureEvaluation(color,  pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                  1, ply, pv, pvChild, uciData,
                  { PV_PARAM(fromIndex, toIndex) });
         } else {
           SEARCH(board, NO_MOVE, NO_MOVE,
                  color, NO_MOVE, &alpha, &beta, &bestValue,
-                 middleGameValue, endGameValue, gamePhaseValue,
-                 captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                 captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                 captureGamePhaseEvaluation(pieceTypeTo),
+                 gameValue, captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                  depth - 1, ply, pv, pvChild, uciData,
                  { PV_PARAM(fromIndex, toIndex) });
         }
@@ -369,19 +347,15 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             if (depth == 1 || quiescence){
               SEARCH(board, NO_MOVE, NO_MOVE,
                      color, ~obstacle, &alpha, &beta, &bestValue,
-                     middleGameValue, endGameValue, gamePhaseValue,
-                     captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureGamePhaseEvaluation(pieceTypeTo),
+                     gameValue,
+                     captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                      1, ply, pv, pvChild, uciData,
                      { PV_PARAM(fromIndex, toIndex) });
             } else {
               SEARCH(board, NO_MOVE, NO_MOVE,
                      color, NO_MOVE, &alpha, &beta, &bestValue,
-                     middleGameValue, endGameValue, gamePhaseValue,
-                     captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureGamePhaseEvaluation(pieceTypeTo),
+                     gameValue,
+                     captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                      depth - 1, ply, pv, pvChild, uciData,
                      { PV_PARAM(fromIndex, toIndex) });
             }
@@ -407,19 +381,15 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             if (depth == 1 || quiescence){
               SEARCH(board, NO_MOVE, NO_MOVE,
                      color, ~obstacle, &alpha, &beta, &bestValue,
-                     middleGameValue, endGameValue, gamePhaseValue,
-                     captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureGamePhaseEvaluation(pieceTypeTo),
+                     gameValue,
+                     captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                      1, ply, pv, pvChild, uciData,
                      { PV_PARAM(fromIndex, toIndex) });
             } else {
               SEARCH(board, NO_MOVE, NO_MOVE,
                      color, NO_MOVE, &alpha, &beta, &bestValue,
-                     middleGameValue, endGameValue, gamePhaseValue,
-                     captureEvaluation(color, MIDDLE_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureEvaluation(color, END_GAME, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
-                     captureGamePhaseEvaluation(pieceTypeTo),
+                     gameValue,
+                     captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
                      depth - 1, ply, pv, pvChild, uciData,
                      { PV_PARAM(fromIndex, toIndex) });
             }
@@ -446,10 +416,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       board -> Occupied[WHITE] ^= AN('h', '1') | AN('f', '1') | AN('g', '1') | AN('e', '1');
       SEARCH(board, 3, AN('e', '1') | AN('f', '1'),
              color, NO_MOVE, &alpha, &beta, &bestValue,
-             middleGameValue, endGameValue, gamePhaseValue,
-             castling_OO_Evaluation(WHITE, MIDDLE_GAME),
-             castling_OO_Evaluation(WHITE, END_GAME),
-             0,
+             gameValue,
+             castling_OO_Evaluation(WHITE),
              depth - 1, ply, pv, pvChild, uciData,
              { pv -> Move[0] = 62 << 6 | 60; });
       board -> KingVirgin[WHITE] = true;
@@ -471,10 +439,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       board -> Occupied[WHITE] ^= AN('a', '1') | AN('d', '1') | AN('c', '1') | AN('e', '1');
       SEARCH(board, NO_MOVE, AN('e', '1') | AN('d', '1'),
              color, NO_MOVE, &alpha, &beta, &bestValue,
-             middleGameValue, endGameValue, gamePhaseValue,
-             castling_OOO_Evaluation(WHITE, MIDDLE_GAME),
-             castling_OOO_Evaluation(WHITE, END_GAME),
-             0,
+             gameValue,
+             castling_OOO_Evaluation(WHITE),
              depth - 1, ply, pv, pvChild, uciData,
              { pv -> Move[0] = 58 << 6 | 60; });
       board -> KingVirgin[WHITE] = true;
@@ -497,10 +463,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       board -> Occupied[BLACK] ^= AN('h', '8') | AN('f', '8') | AN('g', '8') | AN('e', '8');
       SEARCH(board, NO_MOVE, AN('e', '8') | AN('f', '8'),
              color, NO_MOVE, &alpha, &beta, &bestValue,
-             middleGameValue, endGameValue, gamePhaseValue,
-             castling_OO_Evaluation(BLACK, MIDDLE_GAME),
-             castling_OO_Evaluation(BLACK, END_GAME),
-             0,
+             gameValue,
+             castling_OO_Evaluation(BLACK),
              depth - 1, ply, pv, pvChild, uciData,
              { pv -> Move[0] = 6 << 6 | 4; });
       board -> KingVirgin[BLACK] = true;
@@ -522,10 +486,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       board -> Occupied[BLACK] ^= AN('a', '8') | AN('d', '8') | AN('c', '8') | AN('e', '8');
       SEARCH(board, NO_MOVE, AN('e', '8') | AN('d', '8'),
              color, NO_MOVE, &alpha, &beta, &bestValue,
-             middleGameValue, endGameValue, gamePhaseValue,
-             castling_OOO_Evaluation(BLACK, MIDDLE_GAME),
-             castling_OOO_Evaluation(BLACK, END_GAME),
-             0,
+             gameValue,
+             castling_OOO_Evaluation(BLACK),
              depth - 1, ply, pv, pvChild, uciData,
              { pv -> Move[0] = 2 << 6 | 4; });
       board -> KingVirgin[BLACK] = true;
@@ -558,10 +520,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE_EN_PASSANT(board, enPassant, WHITE, from, to);                                          /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               enPassantEvaluation(enPassantIndex, WHITE, MIDDLE_GAME, fromIndex, toIndex),
-               enPassantEvaluation(enPassantIndex, WHITE, END_GAME, fromIndex, toIndex),
-               enPassantGamePhaseEvaluation(),
+               gameValue,
+               enPassantEvaluation(enPassantIndex, WHITE, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE_EN_PASSANT(board, enPassant, WHITE, from, to);                                          /* Undo the move */
@@ -577,10 +537,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE_EN_PASSANT(board, enPassant, BLACK, from, to);                                          /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               enPassantEvaluation(enPassantIndex, BLACK, MIDDLE_GAME, fromIndex, toIndex),
-               enPassantEvaluation(enPassantIndex, BLACK, END_GAME, fromIndex, toIndex),
-               enPassantGamePhaseEvaluation(),
+               gameValue,
+               enPassantEvaluation(enPassantIndex, BLACK, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE_EN_PASSANT(board, enPassant, BLACK, from, to);                                          /* Undo the move */
@@ -610,10 +568,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(WHITE, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(WHITE, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(WHITE, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Undo the move */
@@ -630,10 +586,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(BLACK, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(BLACK, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(BLACK, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Undo the move */
@@ -664,10 +618,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, KNIGHT, from, to);                              /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                color, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(color, MIDDLE_GAME, KNIGHT, fromIndex, toIndex),
-               movementEvaluation(color, END_GAME, KNIGHT, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(color, KNIGHT, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, KNIGHT, from, to);                              /* Undo the move */
@@ -724,10 +676,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
-                   middleGameValue, endGameValue, gamePhaseValue,
-                   movementEvaluation(color, MIDDLE_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   movementEvaluation(color, END_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   0,
+                   gameValue,
+                   movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
                    depth - 1, ply, pv, pvChild, uciData,
                    { PV_PARAM(fromIndex, toIndex) });
             UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                    /* Undo the move */
@@ -754,10 +704,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
-                   middleGameValue, endGameValue, gamePhaseValue,
-                   movementEvaluation(color, MIDDLE_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   movementEvaluation(color, END_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   0,
+                   gameValue,
+                   movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
                    depth - 1, ply, pv, pvChild, uciData,
                    { PV_PARAM(fromIndex, toIndex) });
             UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                    /* Undo the move */
@@ -786,10 +734,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(WHITE, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(WHITE, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(WHITE, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Undo the move */
@@ -805,10 +751,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(BLACK, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(BLACK, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(BLACK, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Undo the move */
@@ -841,10 +785,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                       /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                color, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(color, MIDDLE_GAME, pieceTypeFrom, fromIndex, toIndex),
-               movementEvaluation(color, END_GAME, pieceTypeFrom, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                       /* Undo the move */
@@ -874,10 +816,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(WHITE, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(WHITE, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(WHITE, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Undo the move */
@@ -894,10 +834,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(BLACK, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(BLACK, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(BLACK, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Undo the move */
@@ -955,10 +893,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
-                   middleGameValue, endGameValue, gamePhaseValue,
-                   movementEvaluation(color, MIDDLE_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   movementEvaluation(color, END_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   0,
+                   gameValue,
+                   movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
                    depth - 1, ply, pv, pvChild, uciData,
                    { PV_PARAM(fromIndex, toIndex) });
             UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                    /* Undo the move */
@@ -986,10 +922,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
-                   middleGameValue, endGameValue, gamePhaseValue,
-                   movementEvaluation(color, MIDDLE_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   movementEvaluation(color, END_GAME, pieceTypeFrom, fromIndex, toIndex),
-                   0,
+                   gameValue,
+                   movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
                    depth - 1, ply, pv, pvChild, uciData,
                    { PV_PARAM(fromIndex, toIndex) });
             UNDO_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                    /* Undo the move */
@@ -1018,10 +952,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(WHITE, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(WHITE, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(WHITE, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Undo the move */
@@ -1037,10 +969,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
-               middleGameValue, endGameValue, gamePhaseValue,
-               movementEvaluation(BLACK, MIDDLE_GAME, PAWN, fromIndex, toIndex),
-               movementEvaluation(BLACK, END_GAME, PAWN, fromIndex, toIndex),
-               0,
+               gameValue,
+               movementEvaluation(BLACK, PAWN, fromIndex, toIndex),
                depth - 1, ply, pv, pvChild, uciData,
                { PV_PARAM(fromIndex, toIndex) });
         UNDO_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Undo the move */

@@ -46,14 +46,14 @@
 
 /** Program details **/
 
-char stringUciName[] = "Chandra 000082718";
+char stringUciName[] = "Chandra 21041200";
 char stringUciAuthor[] = "Swastik Mozumder";
 
 
 /** Skeletal representation of the functions in the program **/
 
 bool strscmp(char *, char *);                                           /* Check if the string matches the other from the start */
-SCORE initScore(BOARD *, UCI_DATA *);                                   /* Initialize the score */
+void initScore(BOARD *, UCI_DATA *);                                   /* Initialize the score */
 
 
 /** Check if the string matches the other from the start **/
@@ -76,23 +76,11 @@ bool strscmp(char *input, char *comparer){
  * Add positional and material values of the pieces in the board
 */
 
-int initScore(BOARD *board, UCI_DATA *uciData){
+void initScore(BOARD *board, UCI_DATA *uciData){
   SCORE score = 0;
 
   PIECE_TYPE pieceType;
-  COLOR color;
 
-  GAME_PHASE gamePhase;
-
-  /* See what phase of game is going on */
-  GAME_PHASE_VALUE gamePhaseValue = 0;
-  for (color = INIT_COLOR; color < LAST_COLOR; ++color){
-    for (pieceType = INIT_PIECE; pieceType < LAST_PIECE; ++pieceType){
-      gamePhaseValue += countBit(board -> Board[color][pieceType]) * pieceGamePhaseValue(pieceType);
-    }
-  }
-
-  gamePhase = currentGamePhase(gamePhaseValue);
 
   /* Calculate evaluation for white */
   for (pieceType = INIT_PIECE; pieceType < LAST_PIECE; ++pieceType){
@@ -101,8 +89,8 @@ int initScore(BOARD *board, UCI_DATA *uciData){
     BITBOARD piece;
 
     while ((piece = next(&pieceList))){
-      score -= pieceValue(gamePhase, pieceType);
-      score -= positionalValue(WHITE, gamePhase, pieceType, CONVERT(piece));
+      score -= pieceValue(pieceType);
+      score -= positionalValue(WHITE, pieceType, CONVERT(piece));
     }
 
   }
@@ -114,15 +102,13 @@ int initScore(BOARD *board, UCI_DATA *uciData){
     BITBOARD piece;
 
     while ((piece = next(&pieceList))){
-      score += pieceValue(gamePhase, pieceType);
-      score += positionalValue(BLACK, gamePhase, pieceType, CONVERT(piece));
+      score += pieceValue(pieceType);
+      score += positionalValue(BLACK, pieceType, CONVERT(piece));
     }
 
   }
 
-  uciData -> Score = score + evaluation(board, gamePhaseValue);         /* Add the material, position and the special evaluation score */
-
-  return gamePhaseValue;
+  uciData -> Score = score;        /* Add the material, position and the special evaluation score */
 }
 
 
@@ -139,8 +125,6 @@ int main (){
 
   BOARD board;
   UCI_DATA uciData;
-
-  GAME_PHASE_VALUE gamePhaseValue = 0;
 
   PV pv;
 
@@ -199,14 +183,14 @@ int main (){
       sscanf(input, "go depth %d", &depth);                             /* Check what depth was requested */
       uciData.Nodes = 0;                                                /* We start from zero nodes */
       uciData.Ply = depth;                                              /* Install the depth */
-      gamePhaseValue = initScore(&board, &uciData);                     /* Install the score */
+      initScore(&board, &uciData);                     /* Install the score */
       if (color == BLACK){                                              /* If we are playing white */
         uciData.Score = -uciData.Score;                                 /* We are always considering the positive for black, so we negate the score */
       }
       uciData.InitTime = clock();                                       /* See what is the time now */
       negamax(&board, enPassant, NO_MOVE,                               /* Pass board and en passant, we assume that castling legal one */
               !color, NO_MOVE,                                          /* Flip the color but no quiescence search */
-              -INFINITY, +INFINITY, 0, 0, gamePhaseValue,               /* Start the worst possible assured score and start evaluation as 0 */
+              -INFINITY, +INFINITY, 0,               /* Start the worst possible assured score and start evaluation as 0 */
               uciData.Ply, 0,                                           /* We start from no ply and depth as requested */
               &pv, &uciData);                                           /* Structure for principle variation and uci data */
       printf("bestmove ");

@@ -4,28 +4,16 @@
 
 
 /** Piece values **/
-/* Piece values are given for both in the opening and in the end game
- * Piece values are given in centi-pawns (one hundredth value of a pawn
-*/
+/* Piece values are given in centi-pawns (one hundredth value of a pawn */
 
-const SCORE score_pieceValue[TOTAL_GAME_PHASE][TOTAL_PIECE] =
+const SCORE score_pieceValue[TOTAL_PIECE] =
 {
-  {
     100,  /* Pawn */
-    300,  /* Knight */
+    280,  /* Knight */
     0,    /* Dummy value for king */
-    340,  /* Bishop */
-    500,  /* Rook */
-    900   /* Queen */
-  },
-  {
-    100,  /* Pawn */
-    300,  /* Knight */
-    0,    /* Dummy value for king */
-    340,  /* Bishop */
-    500,  /* Rook */
-    900   /* Queen */
-  },
+    320,  /* Bishop */
+    479,  /* Rook */
+    929   /* Queen */
 };
 
 
@@ -34,286 +22,146 @@ const SCORE score_pieceValue[TOTAL_GAME_PHASE][TOTAL_PIECE] =
  * Positional values are given in centi-pawns (one hundredth value of a pawn
 */
 
-const SCORE score_positionalValue[TOTAL_GAME_PHASE][TOTAL_PIECE][BOARD_SIZE] =
+const SCORE score_positionalValue[TOTAL_PIECE][BOARD_SIZE] =
 {
-  /* Middle Game */
-  {
     /* Pawn */
-    {
-      0,   0,   0,   0,   0,   0,   0,   0,
-      5,  10,  15,  20,  20,  15,  10,   5,
-      4,   8,  12,  16,  16,  12,   8,   4,
-      3,   6,   9,  12,  12,   9,   6,   3,
-      2,   4,   6,   8,   8,   6,   4,   2,
-      1,   2,   3, -10, -10,   3,   2,   1,
-      0,   0,   0, -40, -40,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0
+    {    0,   0,   0,   0,   0,   0,   0,   0,
+        78,  83,  86,  73, 102,  82,  85,  90,
+         7,  29,  21,  44,  40,  31,  44,   7,
+       -17,  16,  -2,  15,  14,   0,  15, -13,
+       -26,   3,  10,   9,   6,   1,   0, -23,
+       -22,   9,   5, -11, -10,  -2,   3, -19,
+       -31,   8,  -7, -37, -36, -14,   3, -31,
+         0,   0,   0,   0,   0,   0,   0,   0
     },
 
     /* Knight */
     {
-      -10, -10, -10, -10, -10, -10, -10, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10, -30, -10, -10, -10, -10, -30, -10
+       -66, -53, -75, -75, -10, -55, -58, -70,
+        -3,  -6, 100, -36,   4,  62,  -4, -14,
+        10,  67,   1,  74,  73,  27,  62,  -2,
+        24,  24,  45,  37,  33,  41,  25,  17,
+        -1,   5,  31,  21,  22,  35,   2,   0,
+       -18,  10,  13,  22,  18,  15,  11, -14,
+       -23, -15,   2,   0,   2,   0, -23, -20,
+       -74, -23, -26, -24, -19, -35, -22, -69
     },
+
 
     /* King */
     {
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -40, -40, -40, -40, -40, -40, -40, -40,
-      -20, -20, -20, -20, -20, -20, -20, -20,
-        0,  20,  40, -20,   0, -20,  40,  20
+         4,  54,  47, -99, -99,  60,  83, -62,
+       -32,  10,  55,  56,  56,  55,  10,   3,
+       -62,  12, -57,  44, -67,  28,  37, -31,
+       -55,  50,  11,  -4, -19,  13,   0, -49,
+       -55, -43, -52, -28, -51, -47,  -8, -50,
+       -47, -42, -43, -79, -64, -32, -29, -32,
+        -4,   3, -14, -50, -57, -18,  13,   4,
+        17,  30,  -3, -14,   6,  -1,  40,  18
     },
 
     /* Bishop */
     {
-      -10, -10, -10, -10, -10, -10, -10, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   5,   4,   4,   5,   0, -10,
-      -10,   0,   6,   4,   4,   6,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10, -10, -20, -10, -10, -20, -10, -10
+       -59, -78, -82, -76, -23,-107, -37, -50,
+       -11,  20,  35, -42, -39,  31,   2, -22,
+        -9,  39, -32,  41,  52, -10,  28, -14,
+        25,  17,  20,  34,  26,  25,  15,  10,
+        13,  10,  17,  23,  17,  16,   0,   7,
+        14,  25,  24,  15,   8,  25,  20,  15,
+        19,  20,  11,   6,   7,   6,  20,  16,
+        -7,   2, -15, -12, -14, -15, -10, -10
     },
 
     /* Rook */
     {
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0
+        35,  29,  33,   4,  37,  33,  56,  50,
+        55,  29,  56,  67,  55,  62,  34,  60,
+        19,  35,  28,  33,  45,  27,  25,  15,
+         0,   5,  16,  13,  18,  -4,  -9,  -6,
+       -28, -35, -16, -21, -13, -29, -46, -30,
+       -42, -28, -42, -25, -25, -35, -26, -46,
+       -53, -38, -31, -26, -29, -43, -44, -53,
+       -30, -24, -18,   5,  -2, -18, -31, -32
     },
 
     /* Queen */
     {
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0
+         6,   1,  -8,-104,  69,  24,  88,  26,
+        14,  32,  60, -10,  20,  76,  57,  24,
+        -2,  43,  32,  60,  72,  63,  43,   2,
+         1, -16,  22,  17,  25,  20, -13,  -6,
+       -14, -15,  -2,  -5,  -1, -10, -20, -22,
+       -30,  -6, -13, -11, -16, -11, -16, -27,
+       -36, -18,   0, -19, -15, -15, -21, -38,
+       -39, -30, -31, -13, -31, -36, -34, -42
     }
-  },
-
-  /* End Game */
-  {
-    /* Pawn */
-    {
-      0,   0,   0,   0,   0,   0,   0,   0,
-      5,  10,  15,  20,  20,  15,  10,   5,
-      4,   8,  12,  16,  16,  12,   8,   4,
-      3,   6,   9,  12,  12,   9,   6,   3,
-      2,   4,   6,   8,   8,   6,   4,   2,
-      1,   2,   3, -10, -10,   3,   2,   1,
-      0,   0,   0, -40, -40,   0,   0,   0,
-      0,   0,   0,   0,   0,   0,   0,   0
-    },
-
-    /* Knight */
-    {
-      -10, -10, -10, -10, -10, -10, -10, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10, -30, -10, -10, -10, -10, -30, -10
-    },
-
-    /* King */
-    {
-      0,  10,  20,  30,  30,  20,  10,   0,
-     10,  20,  30,  40,  40,  30,  20,  10,
-     20,  30,  40,  50,  50,  40,  30,  20,
-     30,  40,  50,  60,  60,  50,  40,  30,
-     30,  40,  50,  60,  60,  50,  40,  30,
-     20,  30,  40,  50,  50,  40,  30,  20,
-     10,  20,  30,  40,  40,  30,  20,  10,
-      0,  10,  20,  30,  30,  20,  10,   0
-    },
-
-    /* Bishop */
-    {
-      -10, -10, -10, -10, -10, -10, -10, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,  10,  10,   5,   0, -10,
-      -10,   0,   5,   5,   5,   5,   0, -10,
-      -10,   0,   0,   0,   0,   0,   0, -10,
-      -10, -10, -20, -10, -10, -20, -10, -10
-    },
-
-    /* Rook */
-    {
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0
-    },
-
-    /* Queen */
-    {
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0,
-        0,   0,   0,   0,   0,   0,   0,   0
-    }
-  }
 };
-
-
-/** Constants which decide the phase of the game **/
-
-const GAME_PHASE_VALUE gamePhaseLimitValue = 2400;                      /* If value less than the limit it is end game else middle game */
-
-/* Values which make the game middle game */
-const GAME_PHASE_VALUE pieceCorrespondingGamePhaseValue[TOTAL_PIECE] =
-{
-  100, 300, 0, 300, 500, 900
-};
-
-
-/** Check which game phase a game phase value represents **/
-/* If value is below than a limit then it is end game else it is middle game */
-
-GAME_PHASE currentGamePhase(GAME_PHASE_VALUE gamePhaseValue){
-  if (gamePhaseLimitValue > gamePhaseValue){
-    return END_GAME;
-  } else {
-    return MIDDLE_GAME;
-  }
-}
 
 
 /** Return a piece value **/
 /* Return a piece value by considering the game phase */
 
-SCORE pieceValue(GAME_PHASE gamePhase, PIECE_TYPE pieceType){
-  return score_pieceValue[gamePhase][pieceType];
+SCORE pieceValue(PIECE_TYPE pieceType){
+  return score_pieceValue[pieceType];
 }
 
 
 /** Return a positional value **/
 /* Return a positional value by considering the color and the game phase */
 
-SCORE positionalValue(COLOR color, GAME_PHASE gamePhase, PIECE_TYPE pieceType, int index){
-  return score_positionalValue[gamePhase][pieceType][color == WHITE ?   /* If positional value is requested for white */
-                                          index :                       /* Return directly */
-                                          index ^ (0x7 << 3)];          /* Change the rank if black */
-}
-
-
-/** Return game phase value for a piece type **/
-/* Return how much a piece affects the game phase */
-
-GAME_PHASE_VALUE pieceGamePhaseValue(PIECE_TYPE pieceType){
-  return pieceCorrespondingGamePhaseValue[pieceType];
+SCORE positionalValue(COLOR color, PIECE_TYPE pieceType, int index){
+  return score_positionalValue[pieceType][color == WHITE ?   /* If positional value is requested for white */
+                              index :                        /* Return directly */
+                              index ^ (0x7 << 3)];           /* Change the rank if black */
 }
 
 
 /** Movement evaluation **/
 /* Return how good is movement of a piece */
 
-SCORE movementEvaluation(COLOR color, GAME_PHASE gamePhase, PIECE_TYPE pieceTypeFrom, int fromIndex, int toIndex){
-  return positionalValue(color, gamePhase, pieceTypeFrom, toIndex) -                    /* We came in here */
-         positionalValue(color, gamePhase, pieceTypeFrom, fromIndex);                   /* We left that place */
+SCORE movementEvaluation(COLOR color, PIECE_TYPE pieceTypeFrom, int fromIndex, int toIndex){
+  return positionalValue(color, pieceTypeFrom, toIndex) -                    /* We came in here */
+         positionalValue(color, pieceTypeFrom, fromIndex);                   /* We left that place */
 }
 
 
 /** Capture evaluation **/
 /* Return how good is capture by a piece */
 
-SCORE captureEvaluation(COLOR color, GAME_PHASE gamePhase, PIECE_TYPE pieceTypeFrom, PIECE_TYPE pieceTypeTo, int fromIndex, int toIndex){
-  return movementEvaluation(color, gamePhase, pieceTypeFrom, fromIndex, toIndex) + /* Movement evaluation */
-         pieceValue(gamePhase, pieceTypeTo) +                                      /* Value of the captured piece */
-         positionalValue(!color, gamePhase, pieceTypeTo, toIndex);                 /* Positional value of the captured piece */
-}
-
-
-/** Captures can affect game phase **/
-/* Return how much captures can affect the phase of the game */
-
-GAME_PHASE_VALUE captureGamePhaseEvaluation(PIECE_TYPE pieceTypeTo){
-  return pieceGamePhaseValue(pieceTypeTo);
+SCORE captureEvaluation(COLOR color, PIECE_TYPE pieceTypeFrom, PIECE_TYPE pieceTypeTo, int fromIndex, int toIndex){
+  return movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex) + /* Movement evaluation */
+         pieceValue(pieceTypeTo) +                                      /* Value of the captured piece */
+         positionalValue(!color, pieceTypeTo, toIndex);                 /* Positional value of the captured piece */
 }
 
 
 /** En passant capture evaluation **/
 /* Return how much a en passant capture is good */
 
-SCORE enPassantEvaluation(int enPassantIndex, COLOR color, GAME_PHASE gamePhase, int fromIndex, int toIndex){
-  return movementEvaluation(color, gamePhase, PAWN, fromIndex, toIndex) +          /* Movement evaluation */
-         pieceValue(gamePhase, PAWN) +                                             /* Value of the captured piece */
-         positionalValue(!color, gamePhase, PAWN, enPassantIndex);                 /* Positional value of the captured piece */
-}
-
-
-/** En passant can affect game phase **/
-/* Return how much a en passant can affect the phase of a game */
-
-GAME_PHASE_VALUE enPassantGamePhaseEvaluation(){
-  return pieceGamePhaseValue(PAWN);
+SCORE enPassantEvaluation(int enPassantIndex, COLOR color, int fromIndex, int toIndex){
+  return movementEvaluation(color, PAWN, fromIndex, toIndex) +          /* Movement evaluation */
+         pieceValue(PAWN) +                                             /* Value of the captured piece */
+         positionalValue(!color, PAWN, enPassantIndex);                 /* Positional value of the captured piece */
 }
 
 
 /** Simple promotion evaluation **/
 /* Return the score for a simple promotion */
 
-SCORE promotionMovementEvaluation(PIECE_TYPE promotionPiece, COLOR color, GAME_PHASE gamePhase, int fromIndex, int toIndex){
-  return pieceValue(gamePhase, promotionPiece) - pieceValue(gamePhase, PAWN) +     /* Promotion piece value */
-         positionalValue(color, gamePhase, promotionPiece, toIndex) -              /* Positional value of the promoting piece */
-         positionalValue(color, gamePhase, PAWN, fromIndex);                       /* Positional value of the pawn */
-}
-
-
-/** Simple promotion can affect the phase of the game **/
-/* Check how much a simple promotion can affect the phase of the game */
-
-GAME_PHASE_VALUE promotionMovementGamePhaseEvaluation(PIECE_TYPE promotionPiece){
-  return pieceGamePhaseValue(promotionPiece);
+SCORE promotionMovementEvaluation(PIECE_TYPE promotionPiece, COLOR color, int fromIndex, int toIndex){
+  return pieceValue(promotionPiece) - pieceValue(PAWN) +     /* Promotion piece value */
+         positionalValue(color, promotionPiece, toIndex) -              /* Positional value of the promoting piece */
+         positionalValue(color, PAWN, fromIndex);                       /* Positional value of the pawn */
 }
 
 
 /** Capture promotion evaluation **/
 /* Return the score for a capture promotion */
 
-SCORE promotionCaptureEvaluation(PIECE_TYPE promotionPiece, COLOR color, GAME_PHASE gamePhase, PIECE_TYPE pieceTypeTo, int fromIndex, int toIndex){
-  return promotionMovementEvaluation(promotionPiece, color, gamePhase, fromIndex, toIndex) +
-         pieceValue(gamePhase, pieceTypeTo) +
-         positionalValue(!color, gamePhase, pieceTypeTo, toIndex);
-}
-
-/** Capture promotion can affect the phase of the game **/
-/* Check how much a capture promotion can affect the phase of the game */
-
-GAME_PHASE_VALUE promotionCaptureGamePhaseEvaluation(PIECE_TYPE promotionPiece, PIECE_TYPE pieceTypeTo){
-  return pieceGamePhaseValue(promotionPiece) + pieceGamePhaseValue(pieceTypeTo);
+SCORE promotionCaptureEvaluation(PIECE_TYPE promotionPiece, COLOR color, PIECE_TYPE pieceTypeTo, int fromIndex, int toIndex){
+  return promotionMovementEvaluation(promotionPiece, color, fromIndex, toIndex) +
+         pieceValue(pieceTypeTo) +
+         positionalValue(!color, pieceTypeTo, toIndex);
 }
 
 
@@ -321,121 +169,23 @@ GAME_PHASE_VALUE promotionCaptureGamePhaseEvaluation(PIECE_TYPE promotionPiece, 
 /* For evaluating castling, add from position square tables and add some extra scores */
 
 /* King side castling (considered better than queen side castling) */
-SCORE castling_OO_Evaluation(COLOR color, GAME_PHASE gamePhase){
-  const SCORE score_castling_OO = 35;
+SCORE castling_OO_Evaluation(COLOR color){
   if (color == WHITE){
-   return positionalValue(WHITE, gamePhase, KING, 62) - positionalValue(WHITE, gamePhase, KING, 60) +
-          positionalValue(WHITE, gamePhase, ROOK, 61) - positionalValue(WHITE, gamePhase, ROOK, 63) + score_castling_OO;
+   return positionalValue(WHITE, KING, 62) - positionalValue(WHITE, KING, 60) +
+          positionalValue(WHITE, ROOK, 61) - positionalValue(WHITE, ROOK, 63);
   } else {
-    return positionalValue(BLACK, gamePhase, KING, 6) - positionalValue(BLACK, gamePhase, KING, 4) +
-           positionalValue(BLACK, gamePhase, ROOK, 5) - positionalValue(BLACK, gamePhase, ROOK, 7) + score_castling_OO;
+    return positionalValue(BLACK, KING, 6) - positionalValue(BLACK, KING, 4) +
+           positionalValue(BLACK, ROOK, 5) - positionalValue(BLACK, ROOK, 7);
   }
 }
 
 /* Queen side castling */
-SCORE castling_OOO_Evaluation(COLOR color, GAME_PHASE gamePhase){
-  const SCORE score_castling_OOO = 30;
+SCORE castling_OOO_Evaluation(COLOR color){
   if (color == WHITE){
-   return positionalValue(WHITE, gamePhase, KING, 58) - positionalValue(WHITE, gamePhase, KING, 60) +
-          positionalValue(WHITE, gamePhase, ROOK, 59) - positionalValue(WHITE, gamePhase, ROOK, 56) + score_castling_OOO;
+   return positionalValue(WHITE, KING, 58) - positionalValue(WHITE, KING, 60) +
+          positionalValue(WHITE, ROOK, 59) - positionalValue(WHITE, ROOK, 56);
   } else {
-    return positionalValue(BLACK, gamePhase, KING, 2) - positionalValue(BLACK, gamePhase, KING, 4) +
-           positionalValue(BLACK, gamePhase, ROOK, 3) - positionalValue(BLACK, gamePhase, ROOK, 0) + score_castling_OOO;
+    return positionalValue(BLACK, KING, 2) - positionalValue(BLACK, KING, 4) +
+           positionalValue(BLACK, ROOK, 3) - positionalValue(BLACK, ROOK, 0);
   }
-}
-
-
-/** Special evaluation functions **/
-/* Check if there are double pawns
- * Check if the pawns of the king are bad
- * Return score
-*/
-
-
-/** Macro to evaluate the pawn of the king **/
-/* Check the color requested
- * If it is not moved yet, no problem return zero
- * Else if it moved one step return a worse score
- * Else if it moved two steps return worse score
- * Else if there are pawns on the file (if the pawn of the king moved far ahead), return worse score
- * Else return the worst score (if there no pawns in the file
-*/
-
-#define KING_PAWN_SCORE(color, pawn, file) \
-  (color == WHITE ? \
-                    ((pawn) & AN((file), '2')) ? 0 : \
-                    ((pawn) & AN((file), '3')) ? -10 : \
-                    ((pawn) & FILE_A >> ((file) - 'a')) ? -20 : \
-                     -25 \
-                  : ((pawn) & AN((file), '7')) ? 0 : \
-                    ((pawn) & AN((file), '6')) ? -10 : \
-                    ((pawn) & FILE_A >> ((file) - 'a')) ? -20 : \
-                    -25 \
-  )
-
-
-/** Main special evaluation function **/
-/* Evaluate double pawns
- * Evaluation king pawns
- * Compute king safety
- * Return score
-*/
-
-SCORE evaluation(BOARD *board, GAME_PHASE_VALUE gamePhaseValue){
-  const SCORE doublePawn_penalty = -10;                                 /* Double pawn bad */
-
-  SCORE score = 0;                                                      /* Start from no score */
-
-  BITBOARD pawnWhite = board -> Board[WHITE][PAWN];                     /* Store white pawns */
-  BITBOARD pawnBlack = board -> Board[BLACK][PAWN];                     /* Store black pawns */
-
-  /* Score from no score */
-  SCORE kingWhite = 0;
-  SCORE kingBlack = 0;
-
-  BITBOARD file;
-  for (file = FILE_A; file; file >>= 1){                                /* For all files */
-    BITBOARD filePawnWhite = file & pawnWhite;                          /* The white pawns in that file */
-    BITBOARD filePawnBlack = file & pawnBlack;                          /* The black pawns in that file */
-    if (filePawnBlack && (filePawnBlack & (filePawnBlack - 1))){        /* If there are pawns and double pawns */
-      score += doublePawn_penalty;                                      /* Penalty */
-    }
-    if (filePawnWhite && (filePawnWhite & (filePawnWhite - 1))){        /* If there are pawns and double pawns */
-      score -= doublePawn_penalty;                                      /* Penalty */
-    }
-  }
-
-  /* We will add penalty for king side pawns if the king is in the king side else we will add for the queen side pawns */
-
-  /* For the white king */
-  if (board -> Board[WHITE][KING] & (FILE_H | FILE_G | FILE_F | FILE_E)){
-    if (!(pawnWhite & AN('h', '3')))                                    /* The h3 is never bad */
-      kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'h');
-    kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'g');                /* Our engine is not expert in KID */
-    kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'f') >> 1;           /* The file f has less problem */
-  } else {
-    if (!(pawnWhite & AN('a', '3')))
-      kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'a');              /* The a3 is never bad */
-    kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'b');                /* Our engine is not expert in KID */
-    kingWhite += KING_PAWN_SCORE(WHITE, pawnWhite, 'c') >> 1;           /* The file a has less problem */
-  }
-
-  /* For the black king */
-  if (board -> Board[BLACK][KING] & (FILE_H | FILE_G | FILE_F | FILE_E)){
-    if (!(pawnBlack & AN('h', '6')))                                    /* The h3 is never bad */
-      kingBlack += KING_PAWN_SCORE(BLACK, pawnBlack, 'h');
-    kingBlack += KING_PAWN_SCORE(BLACK, pawnBlack, 'g');                /* Our engine is not expert in KID */
-    kingBlack += KING_PAWN_SCORE(BLACK, pawnBlack, 'f') >> 1;           /* The file f has less problem */
-  } else {
-    if (!(pawnBlack & AN('a', '6')))
-      kingBlack += KING_PAWN_SCORE(BLACK, pawnBlack, 'a');              /* The a3 is never bad */
-    kingBlack += KING_PAWN_SCORE(BLACK,  pawnBlack, 'b');               /* Our engine is not expert in KID */
-    kingBlack += KING_PAWN_SCORE(BLACK, pawnBlack, 'c') >> 1;           /* The file a has less problem */
-  }
-
-  /* The penalty should be high only if there enough pieces to attack our king */
-  kingBlack *= (gamePhaseValue >> 1) / 3100;
-  kingWhite *= (gamePhaseValue >> 1) / 3100;
-
-  return score + kingBlack - kingWhite;                                 /* We return score positive for black */
 }
