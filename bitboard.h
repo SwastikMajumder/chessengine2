@@ -50,6 +50,7 @@ typedef enum {
 #define NO_MOVE ((BITBOARD)0)
 
 
+
 /** Flags **/
 
 /* Flag for knowing if the move is a promotion */
@@ -77,6 +78,12 @@ typedef enum {
 #define TOTAL_GAME_PHASE 2                                              /* Middle game and the opening */
 
 #define MAX_DEPTH 1024                                                  /* Maximum possible depth (large number) */
+
+
+/** Time Out **/
+/* Time is finished when the engine was to return move in a time */
+
+#define TIME_OVER -INFINITY
 
 
 /** Iteration constants **/

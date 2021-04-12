@@ -38,6 +38,7 @@ typedef struct PV {
 
 typedef struct UCI_DATA {
   int Ply;
+  int MoveTime;
   SCORE Score;
   clock_t InitTime;
   unsigned long int Nodes;

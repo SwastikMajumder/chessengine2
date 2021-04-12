@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
@@ -75,6 +76,10 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
     if ((ply) == 0){ \
       int i; \
       if ((pv) -> NumberOfMoves > 0){ \
+        if ((uciData) -> MoveTime != -1 && \
+            (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
+                return TIME_OVER; \
+        } \
         printf("info depth %d seldepth %d score cp %d nodes %lu nps %lu time %u pv ", \
                (uciData) -> Ply, (pv) -> NumberOfMoves, value + (uciData) -> Score, \
                (uciData) -> Nodes, (unsigned long int)((double) (uciData) -> Nodes / \

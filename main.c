@@ -31,6 +31,8 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <signal.h>
 
@@ -46,8 +48,8 @@
 
 /** Program details **/
 
-char stringUciName[] = "Chandra 21041200";
-char stringUciAuthor[] = "Swastik Mozumder";
+char stringUciName[] = "Bart 21041201";
+char stringUciAuthor[] = "Swastik Majumder";
 
 
 /** Skeletal representation of the functions in the program **/
@@ -127,11 +129,14 @@ int main (){
   UCI_DATA uciData;
 
   PV pv;
+  PV pv_tmp;
 
   COLOR color = BLACK;
   BITBOARD enPassant = NO_MOVE;
 
   int depth;
+  int depthIncr;
+  int moveTime;
 
   resetBoard(&board);
 
@@ -179,9 +184,51 @@ int main (){
     else if (strscmp(input, "d")){                                      /* This is not mentioned in the uci protocol but used in debugging */
       printBoard(&board);                                               /* Print the board in readable format */
     }
+    else if (strscmp(input, "go movetime ")){
+      sscanf(input, "go movetime %d", &moveTime);                             /* Check what depth was requested */
+      uciData.MoveTime = moveTime;
+      uciData.Nodes = 0;                                                 /* Install the depth */
+      initScore(&board, &uciData);                     /* Install the score */
+      if (color == BLACK){                                              /* If we are playing white */
+        uciData.Score = -uciData.Score;                                 /* We are always considering the positive for black, so we negate the score */
+      }
+      uciData.InitTime = clock();                                       /* See what is the time now */
+      int scoreData;
+      int doneState = 0;
+      int i;
+      for (depthIncr=1; ; ++depthIncr){
+        uciData.Ply=depthIncr;
+        scoreData=doneState;
+        doneState = negamax(&board, enPassant, NO_MOVE,
+              !color, NO_MOVE,
+              -INFINITY, +INFINITY, 0,
+              depthIncr, 0,
+              &pv_tmp, &uciData);
+        if (doneState != TIME_OVER){
+            memcpy(&pv, &pv_tmp, sizeof(PV));
+        } else {
+            break;
+        }
+      }
+      printf("info depth %d seldepth %d score cp %d nodes %lu nps %lu time %u pv ",
+               uciData.Ply, pv.NumberOfMoves, scoreData + uciData.Score,
+               uciData.Nodes, (unsigned long int)((double) uciData.Nodes /
+               ((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC)),
+               (unsigned)((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC));
+        for (i=0; i < pv.NumberOfMoves; ++i){
+          PRINT_PV_MOVE( . , i);
+        }
+      putchar('\n');
+      printf("bestmove ");
+      PRINT_PV_MOVE( . , 0);
+      printf("ponder ");
+      PRINT_PV_MOVE( . , 1);
+      putchar('\n');
+    }
     else if (strscmp(input, "go depth ")){                              /* Search within limited depth */
       sscanf(input, "go depth %d", &depth);                             /* Check what depth was requested */
       uciData.Nodes = 0;                                                /* We start from zero nodes */
+      uciData.MoveTime = -1;
       uciData.Ply = depth;                                              /* Install the depth */
       initScore(&board, &uciData);                     /* Install the score */
       if (color == BLACK){                                              /* If we are playing white */
