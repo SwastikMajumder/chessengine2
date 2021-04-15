@@ -125,7 +125,7 @@ bool kingInCheck(BOARD *board, COLOR color){
                        (depth), \
                         (ply) + 1, &(pvChild), (uciData)); \
   if (-value + INFINITY - 3 == ply && kingInCheck(board, !color) == false){ \
-    value = -(uciData) -> Score; \
+    value = ((ply & 1) ? (uciData) -> Score : -(uciData) -> Score); \
   } \
   if (ply < 3 && (uciData) -> MoveTime != -1 && \
             (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
