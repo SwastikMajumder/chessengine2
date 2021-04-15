@@ -14,8 +14,6 @@ typedef uint64_t BITBOARD;
 /* Type stores the score or evaluation of a node */
 typedef int SCORE;
 
-typedef int GAME_PHASE_VALUE;
-
 /** Enumerated typedefs **/
 
 /* Color */
@@ -30,12 +28,6 @@ typedef enum {
   PAWN = 0, KNIGHT = 1, KING = 2,                                       /* Non sliding pieces including the king */
   BISHOP = 3, ROOK = 4, QUEEN  = 5                                      /* Sliding pieces */
 } PIECE_TYPE;
-
-/* Phase of the game */
-typedef enum {
-  MIDDLE_GAME = 0,                                                      /* Middle game */
-  END_GAME = 1                                                          /* End game */
-} GAME_PHASE;
 
 
 /** To allow unsigned subtraction underflow **/
@@ -74,8 +66,6 @@ typedef enum {
 #define TOTAL_ATTACK_DIRECTION 8                                        /* Total possible attack direction (exception knight, we consider sliding one */
 
 #define TOTAL_CASTLING_POSSIBILITY 2                                    /* How many ways the king can castle */
-
-#define TOTAL_GAME_PHASE 2                                              /* Middle game and the opening */
 
 #define MAX_DEPTH 1024                                                  /* Maximum possible depth (large number) */
 

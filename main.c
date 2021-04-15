@@ -1,32 +1,5 @@
 /**********************************************************************
-*********************** Chess Engine - Chandra ************************
-***********************************************************************
- * Wrote in ANSI C
- * Negamax with alpha beta pruning
- * Follows UCI protocol
- * To do
-  -> Better move ordering
-  -> Three fold repetition
-  -> Mate count
-  -> Stalemate
-  -> Iterative deepening
-  -> Calculating with given move time
-  -> Better evaluation like passed and isolated pawns
-  -> King safety
-  -> Killer Moves
-  -> Null move
-  -> Futility pruning
-  -> Late Move Reductions
-  -> Faster move generation
-  -> Transposition Tables
-  -> Time man for tournament time limits
-  -> Incremental time limits
-  -> Window searching
-  -> Fifty move rule
-  -> Magic bit boards
-  -> Reduce repetitions in code
-***********************************************************************
-***********************************************************************
+*********************** Chess Engine - Phalp **************************
 **********************************************************************/
 
 
@@ -48,7 +21,7 @@
 
 /** Program details **/
 
-char stringUciName[] = "Bart 21041201";
+char stringUciName[] = "Phalp 21041501";
 char stringUciAuthor[] = "Swastik Majumder";
 
 
@@ -187,6 +160,59 @@ int main (){
     else if (strscmp(input, "go movetime ")){
       sscanf(input, "go movetime %d", &moveTime);                             /* Check what depth was requested */
       uciData.MoveTime = moveTime;
+      uciData.Nodes = 0;                                                 /* Install the depth */
+      initScore(&board, &uciData);                     /* Install the score */
+      if (color == BLACK){                                              /* If we are playing white */
+        uciData.Score = -uciData.Score;                                 /* We are always considering the positive for black, so we negate the score */
+      }
+      uciData.InitTime = clock();                                       /* See what is the time now */
+      int scoreData;
+      int doneState = 0;
+      int i;
+      for (depthIncr=1; ; ++depthIncr){
+        uciData.Ply=depthIncr;
+        scoreData=doneState;
+        doneState = negamax(&board, enPassant, NO_MOVE,
+              !color, NO_MOVE,
+              -INFINITY, +INFINITY, 0,
+              depthIncr, 0,
+              &pv_tmp, &uciData);
+        if (doneState != TIME_OVER){
+            memcpy(&pv, &pv_tmp, sizeof(PV));
+        } else {
+            break;
+        }
+      }
+      printf("info depth %d seldepth %d score cp %d nodes %lu nps %lu time %u pv ",
+               uciData.Ply, pv.NumberOfMoves, scoreData + uciData.Score,
+               uciData.Nodes, (unsigned long int)((double) uciData.Nodes /
+               ((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC)),
+               (unsigned)((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC));
+        for (i=0; i < pv.NumberOfMoves; ++i){
+          PRINT_PV_MOVE( . , i);
+        }
+      putchar('\n');
+      printf("bestmove ");
+      PRINT_PV_MOVE( . , 0);
+      printf("ponder ");
+      PRINT_PV_MOVE( . , 1);
+      putchar('\n');
+    }
+    else if (strscmp(input, "go wtime")){
+        int wtime;
+        int btime;
+        int winc;
+        int binc;
+        int movestogo;
+        if (sscanf(input, "go wtime %d btime %d winc %d binc %d movestogo %d", &wtime, &btime, &winc, &binc, &movestogo) != 5){
+            movestogo = 150;
+        }
+        if (color == WHITE){
+            moveTime = btime/movestogo;
+        } else {
+            moveTime = wtime/movestogo;
+        }
+        uciData.MoveTime = moveTime;
       uciData.Nodes = 0;                                                 /* Install the depth */
       initScore(&board, &uciData);                     /* Install the score */
       if (color == BLACK){                                              /* If we are playing white */

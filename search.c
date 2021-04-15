@@ -29,7 +29,7 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
 #define KING_CAPTURE_ERROR(pieceType, pv){ \
   if (pieceType == KING){ \
     (pv) -> NumberOfMoves = 0; \
-    return INFINITY - 1; \
+    return INFINITY - 1 - ply; \
   } \
 }
 
@@ -66,6 +66,10 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
                                           (gameValue) + (gameEvaluation), \
                        (depth), \
                         (ply) + 1, &(pvChild), (uciData)); \
+  if (ply < 3 && (uciData) -> MoveTime != -1 && \
+            (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
+                return TIME_OVER; \
+  } \
   if (value > *(bestValue)){ \
     *(bestValue) = value; \
   } \
