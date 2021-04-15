@@ -18,6 +18,64 @@
 /* Search positions in the game using alpha beta pruning */
 SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *);
 
+bool kingInCheck(BOARD *board, COLOR color){
+  BITBOARD occupiedFriend = board -> Occupied[color];
+  BITBOARD occupiedOpponent = board -> Occupied[!color];
+  BITBOARD occupied = occupiedFriend | occupiedOpponent;
+  PIECE_TYPE pieceTypeFrom;
+  for (pieceTypeFrom = INIT_PIECE_NON_SLIDING; pieceTypeFrom < LAST_PIECE_NON_SLIDING - 1; ++pieceTypeFrom){  /* For all the non sliding pieces */
+    BITBOARD fromList = board -> Board[color][pieceTypeFrom]; // For all pieces of a type
+    BITBOARD from;
+    while ((from = next(&fromList))){                                                                     /* Iterate through the pieces */
+      int fromIndex = CONVERT(from);                                                                      /* Convert the bit board to index */
+      BITBOARD toList = pseudoMove_nonSliding(color, pieceTypeFrom, fromIndex) &                          /* Pseudo attack, never fails */
+                        ~occupiedFriend & occupiedOpponent;                                 /* Only consider captures */
+      BITBOARD to;
+      while ((to = next(&toList))){                                                                     /* Convert the bit board to index */
+        PIECE_TYPE pieceTypeTo = identifyPiece(board, !color, to);
+        if (pieceTypeTo == KING){
+            return true;
+        }
+      }
+    }
+  }
+  for (pieceTypeFrom = INIT_PIECE_SLIDING; pieceTypeFrom < LAST_PIECE_SLIDING; ++pieceTypeFrom){          /* For all the sliding pieces */
+    BITBOARD fromList = board -> Board[color][pieceTypeFrom];                                             /* Consider all the pieces of the same kind */
+    BITBOARD from;
+    while ((from = next(&fromList))){                                                                     /* Iterate through the pieces */
+      ATTACK_DIRECTION attackDirection;                                                                   /* Attack direction of the sliding pieces */
+      int fromIndex = CONVERT(from);                                                                      /* Convert bit board to index */
+      for (attackDirection = INIT_ATTACK_DIRECTION_UPWARDS(pieceTypeFrom);                                /* Iterate through all the attack directions */
+           attackDirection < LAST_ATTACK_DIRECTION_UPWARDS(pieceTypeFrom); ++attackDirection){            /* in which the piece attack upwards */
+        BITBOARD obstacle;
+        if ((obstacle = pseudoMove_sliding(attackDirection, fromIndex) & occupied)){                      /* If there are obstacles */
+          if ((obstacle = RIGHT(obstacle) & occupiedOpponent)){
+            PIECE_TYPE pieceTypeTo;                                                                /* Convert bit board to index */
+            pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
+            if (pieceTypeTo == KING){
+                return true;
+            }
+          }
+        }
+      }
+      for (attackDirection = INIT_ATTACK_DIRECTION_DOWNWARDS(pieceTypeFrom);                              /* Iterate through the attack directions */
+           attackDirection < LAST_ATTACK_DIRECTION_DOWNWARDS(pieceTypeFrom); ++attackDirection){          /* in which the piece attack downwards */
+        BITBOARD obstacle;
+        if ((obstacle = pseudoMove_sliding(attackDirection, fromIndex) & occupied)){                      /* If there are obstacles */
+          if ((obstacle = LEFT(obstacle) & occupiedOpponent)){
+            PIECE_TYPE pieceTypeTo;                                                           /* Convert bit board to index */
+            pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
+            if (pieceTypeTo == KING){
+                return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 
 /** Illegal moves **/
 /* If king is captured or castling is done in wrong condition
@@ -66,6 +124,9 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
                                           (gameValue) + (gameEvaluation), \
                        (depth), \
                         (ply) + 1, &(pvChild), (uciData)); \
+  if (-value + INFINITY - 3 == ply && kingInCheck(board, !color) == false){ \
+    value = -(uciData) -> Score; \
+  } \
   if (ply < 3 && (uciData) -> MoveTime != -1 && \
             (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
                 return TIME_OVER; \
@@ -80,10 +141,6 @@ SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE,
     if ((ply) == 0){ \
       int i; \
       if ((pv) -> NumberOfMoves > 0){ \
-        if ((uciData) -> MoveTime != -1 && \
-            (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
-                return TIME_OVER; \
-        } \
         printf("info depth %d seldepth %d score cp %d nodes %lu nps %lu time %u pv ", \
                (uciData) -> Ply, (pv) -> NumberOfMoves, value + (uciData) -> Score, \
                (uciData) -> Nodes, (unsigned long int)((double) (uciData) -> Nodes / \

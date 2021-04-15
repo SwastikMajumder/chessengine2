@@ -21,7 +21,7 @@
 
 /** Program details **/
 
-char stringUciName[] = "Phalp 21041501";
+char stringUciName[] = "Phalp 21041502";
 char stringUciAuthor[] = "Swastik Majumder";
 
 
