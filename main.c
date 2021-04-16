@@ -21,7 +21,7 @@
 
 /** Program details **/
 
-char stringUciName[] = "Phalp 21041502";
+char stringUciName[] = "Phalp 21041604";
 char stringUciAuthor[] = "Swastik Majumder";
 
 
@@ -101,6 +101,8 @@ int main (){
   BOARD board;
   UCI_DATA uciData;
 
+  int pvMove[MAX_DEPTH];
+
   PV pv;
   PV pv_tmp;
 
@@ -128,6 +130,7 @@ int main (){
       printf("readyok\n");
     }
     else if (strscmp(input, "position startpos moves ")){               /* We are getting the position of the board */
+      memset(pvMove, 0, sizeof(int) * MAX_DEPTH);
       resetBoard(&board);                                               /* Reset the board */
       moveList = input + 24;                                            /* Ignore the command part */
       enPassant = NO_MOVE;                                              /* Initial board setup there is no en passant */
@@ -144,6 +147,7 @@ int main (){
       }
     }
     else if (strscmp(input, "position startpos") || strscmp(input, "ucinewgame")){
+      memset(pvMove, 0, sizeof(int) * MAX_DEPTH);
       resetBoard(&board);                                               /* Reset the board */
       color = BLACK;                                                    /* White plays first */
     }
@@ -152,7 +156,7 @@ int main (){
       printf(stringUciName);
       printf("\nid author ");
       printf(stringUciAuthor);
-      printf("\n\nuciok\n");
+      printf("\nuciok\n");
     }
     else if (strscmp(input, "d")){                                      /* This is not mentioned in the uci protocol but used in debugging */
       printBoard(&board);                                               /* Print the board in readable format */
@@ -176,7 +180,9 @@ int main (){
               !color, NO_MOVE,
               -INFINITY, +INFINITY, 0,
               depthIncr, 0,
-              &pv_tmp, &uciData);
+              &pv_tmp, &uciData, pvMove);
+        //printf("Outside\n");
+        pvMove[depthIncr - 1] = pv_tmp.Move[0];
         if (doneState != TIME_OVER){
             memcpy(&pv, &pv_tmp, sizeof(PV));
         } else {
@@ -229,7 +235,8 @@ int main (){
               !color, NO_MOVE,
               -INFINITY, +INFINITY, 0,
               depthIncr, 0,
-              &pv_tmp, &uciData);
+              &pv_tmp, &uciData, pvMove);
+        pvMove[depthIncr - 1] = pv_tmp.Move[0];
         if (doneState != TIME_OVER){
             memcpy(&pv, &pv_tmp, sizeof(PV));
         } else {
@@ -252,20 +259,38 @@ int main (){
       putchar('\n');
     }
     else if (strscmp(input, "go depth ")){                              /* Search within limited depth */
-      sscanf(input, "go depth %d", &depth);                             /* Check what depth was requested */
+      sscanf(input, "go depth %d", &depth);                                   /* Check what depth was requested */
       uciData.Nodes = 0;                                                /* We start from zero nodes */
-      uciData.MoveTime = -1;
-      uciData.Ply = depth;                                              /* Install the depth */
+      uciData.MoveTime = -1;                                            /* Install the depth */
       initScore(&board, &uciData);                     /* Install the score */
       if (color == BLACK){                                              /* If we are playing white */
         uciData.Score = -uciData.Score;                                 /* We are always considering the positive for black, so we negate the score */
       }
-      uciData.InitTime = clock();                                       /* See what is the time now */
-      negamax(&board, enPassant, NO_MOVE,                               /* Pass board and en passant, we assume that castling legal one */
-              !color, NO_MOVE,                                          /* Flip the color but no quiescence search */
-              -INFINITY, +INFINITY, 0,               /* Start the worst possible assured score and start evaluation as 0 */
-              uciData.Ply, 0,                                           /* We start from no ply and depth as requested */
-              &pv, &uciData);                                           /* Structure for principle variation and uci data */
+      uciData.InitTime = clock();                                         /* See what is the time now */
+      int scoreData;
+      int doneState = 0;
+      int i;
+      for (depthIncr=1; depthIncr <= depth; ++depthIncr){
+        uciData.Ply=depthIncr;
+        scoreData=doneState;
+        doneState = negamax(&board, enPassant, NO_MOVE,
+              !color, NO_MOVE,
+              -INFINITY, +INFINITY, 0,
+              depthIncr, 0,
+              &pv_tmp, &uciData, pvMove);
+        //printf("Outside\n");
+        pvMove[depthIncr - 1] = pv_tmp.Move[0];
+        memcpy(&pv, &pv_tmp, sizeof(PV));
+      }
+      printf("info depth %d seldepth %d score cp %d nodes %lu nps %lu time %u pv ",
+               uciData.Ply, pv.NumberOfMoves, scoreData + uciData.Score,
+               uciData.Nodes, (unsigned long int)((double) uciData.Nodes /
+               ((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC)),
+               (unsigned)((double)(clock() - uciData.InitTime) / CLOCKS_PER_SEC));
+        for (i=0; i < pv.NumberOfMoves; ++i){
+          PRINT_PV_MOVE( . , i);
+        }
+      putchar('\n');
       printf("bestmove ");
       PRINT_PV_MOVE( . , 0);
       printf("ponder ");

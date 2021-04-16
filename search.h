@@ -47,7 +47,7 @@ typedef struct UCI_DATA {
 
 /** Search further nodes using negamax search with alpha beta pruning **/
 
-int negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *);
+int negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *, int *);
 
 
 #endif /* SEARCH_H_INCLUDED */

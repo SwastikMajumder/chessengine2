@@ -16,66 +16,30 @@
 /** Skeletal representation of all the functions in the program **/
 
 /* Search positions in the game using alpha beta pruning */
-SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *);
+SCORE negamax(BOARD *, BITBOARD, BITBOARD, COLOR, BITBOARD, SCORE, SCORE, SCORE, int, int, PV *, UCI_DATA *, int *);
 
-bool kingInCheck(BOARD *board, COLOR color){
-  BITBOARD occupiedFriend = board -> Occupied[color];
-  BITBOARD occupiedOpponent = board -> Occupied[!color];
-  BITBOARD occupied = occupiedFriend | occupiedOpponent;
-  PIECE_TYPE pieceTypeFrom;
-  for (pieceTypeFrom = INIT_PIECE_NON_SLIDING; pieceTypeFrom < LAST_PIECE_NON_SLIDING - 1; ++pieceTypeFrom){  /* For all the non sliding pieces */
-    BITBOARD fromList = board -> Board[color][pieceTypeFrom]; // For all pieces of a type
-    BITBOARD from;
-    while ((from = next(&fromList))){                                                                     /* Iterate through the pieces */
-      int fromIndex = CONVERT(from);                                                                      /* Convert the bit board to index */
-      BITBOARD toList = pseudoMove_nonSliding(color, pieceTypeFrom, fromIndex) &                          /* Pseudo attack, never fails */
-                        ~occupiedFriend & occupiedOpponent;                                 /* Only consider captures */
-      BITBOARD to;
-      while ((to = next(&toList))){                                                                     /* Convert the bit board to index */
-        PIECE_TYPE pieceTypeTo = identifyPiece(board, !color, to);
-        if (pieceTypeTo == KING){
-            return true;
-        }
-      }
-    }
-  }
-  for (pieceTypeFrom = INIT_PIECE_SLIDING; pieceTypeFrom < LAST_PIECE_SLIDING; ++pieceTypeFrom){          /* For all the sliding pieces */
-    BITBOARD fromList = board -> Board[color][pieceTypeFrom];                                             /* Consider all the pieces of the same kind */
-    BITBOARD from;
-    while ((from = next(&fromList))){                                                                     /* Iterate through the pieces */
-      ATTACK_DIRECTION attackDirection;                                                                   /* Attack direction of the sliding pieces */
-      int fromIndex = CONVERT(from);                                                                      /* Convert bit board to index */
-      for (attackDirection = INIT_ATTACK_DIRECTION_UPWARDS(pieceTypeFrom);                                /* Iterate through all the attack directions */
-           attackDirection < LAST_ATTACK_DIRECTION_UPWARDS(pieceTypeFrom); ++attackDirection){            /* in which the piece attack upwards */
-        BITBOARD obstacle;
-        if ((obstacle = pseudoMove_sliding(attackDirection, fromIndex) & occupied)){                      /* If there are obstacles */
-          if ((obstacle = RIGHT(obstacle) & occupiedOpponent)){
-            PIECE_TYPE pieceTypeTo;                                                                /* Convert bit board to index */
-            pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
-            if (pieceTypeTo == KING){
-                return true;
+void removeDuplicate(int *pvMove, int depth){
+    int i, j;
+    for (i=depth-1; i > 0; --i){
+        for (j=i-1; j>=0; --j){
+            if (pvMove[i] == pvMove[j]){
+                pvMove[j] = 0;
             }
-          }
         }
-      }
-      for (attackDirection = INIT_ATTACK_DIRECTION_DOWNWARDS(pieceTypeFrom);                              /* Iterate through the attack directions */
-           attackDirection < LAST_ATTACK_DIRECTION_DOWNWARDS(pieceTypeFrom); ++attackDirection){          /* in which the piece attack downwards */
-        BITBOARD obstacle;
-        if ((obstacle = pseudoMove_sliding(attackDirection, fromIndex) & occupied)){                      /* If there are obstacles */
-          if ((obstacle = LEFT(obstacle) & occupiedOpponent)){
-            PIECE_TYPE pieceTypeTo;                                                           /* Convert bit board to index */
-            pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
-            if (pieceTypeTo == KING){
-                return true;
-            }
-          }
-        }
-      }
     }
-  }
-  return false;
 }
 
+bool contain(int *pvMove, int fromIndex, int toIndex, int depth){
+    int i;
+    int move = toIndex << 6 | fromIndex;
+    for (i=0; i<depth; ++i){
+        if (pvMove[i] && pvMove[i] == move){
+                //printf("skip\n");
+            return true;
+        }
+    }
+    return false;
+}
 
 /** Illegal moves **/
 /* If king is captured or castling is done in wrong condition
@@ -123,7 +87,7 @@ bool kingInCheck(BOARD *board, COLOR color){
                        (color) == WHITE ? (gameValue) - (gameEvaluation) : \
                                           (gameValue) + (gameEvaluation), \
                        (depth), \
-                        (ply) + 1, &(pvChild), (uciData)); \
+                        (ply) + 1, &(pvChild), (uciData), NULL); \
   if (ply < 3 && (uciData) -> MoveTime != -1 && \
             (uciData) -> MoveTime <= (int)(1000*((double)(clock() - (uciData) -> InitTime) / CLOCKS_PER_SEC)) + 100){ \
                 return TIME_OVER; \
@@ -191,13 +155,12 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
               COLOR color, BITBOARD quiescence, SCORE alpha, SCORE beta,                                  /* Search */
               SCORE gameValue,
               int depth, int ply,                                                                         /* Depth */
-              PV *pv, UCI_DATA *uciData){                                                                 /* Data */
+              PV *pv, UCI_DATA *uciData, int *pvMove){                                                                 /* Data */
 
   PIECE_TYPE pieceTypeFrom;
   BITBOARD pawnList;
 
   int bestValue;
-
   /* Storing what places of board are occupied in separate variables */
   BITBOARD occupiedFriend = board -> Occupied[color];
   BITBOARD occupiedOpponent = board -> Occupied[!color];
@@ -208,7 +171,6 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
 
 
   PV pvChild;                                                                                             /* Principle variation of child nodes */
-
 
   uciData -> Nodes++;                                                                                     /* Increase node count */
 
@@ -224,6 +186,144 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
            gameValue;
   }
 
+  int pvFromIndex;
+  int pvToIndex;
+  if (ply == 0 && depth > 1 && uciData -> MoveTime != -1){
+    int index;
+    removeDuplicate(pvMove, depth - 1);
+    for (index = depth - 2; index >= 0; --index){
+//printf("%d %d %d\n", depth, pvMove[index] & 63, pvMove[index] >> 6 & 63);
+        if (pvMove[index]){
+            //printf("Sorted Move\n");
+            pvFromIndex = pvMove[index] & 63;
+            pvToIndex = pvMove[index] >> 6 & 63;
+            int fromIndex = pvFromIndex;
+            int toIndex = pvToIndex;
+            BITBOARD from = ((BITBOARD)0x1) << (63 - pvFromIndex);
+            BITBOARD to = ((BITBOARD)0x1) << (63 - pvToIndex);
+            //printf("%d %d %d\n", depth, pvFromIndex & 63, pvToIndex >> 6 & 63);
+            //binaryPrint(from);
+            //binaryPrint(to);
+            PIECE_TYPE pieceTypeFrom = identifyPiece(board, color, from);
+            PIECE_TYPE pieceTypeTo = identifyPiece(board, !color, to);
+            if (pieceTypeTo == KING){
+                return INFINITY - 1 - ply;
+            }
+            if (to & castling){
+                return INFINITY - 2;
+            }
+            rookVirgin = board -> RookVirgin[color];
+            kingVirgin = board -> KingVirgin[color];
+            BITBOARD enPassant_tmp = NO_MOVE;
+            if (pv -> Move[0] & FLAG_PROMOTION){
+                if (pieceTypeTo != INVALID_PIECE_TYPE){
+                  pvMove[index] = 0;
+                  continue;
+                  /*
+                  PLAY_MOVE_PROMOTION_CAPTURE(board, QUEEN, color, pieceTypeTo, from, to);
+                  SEARCH(board, NO_MOVE, NO_MOVE,
+                         color, NO_MOVE, &alpha, &beta, &bestValue,
+                         gameValue,
+                         promotionCaptureEvaluation(QUEEN, color, pieceTypeTo, fromIndex, toIndex),
+                         depth - 1, ply, pv, pvChild, uciData,
+                         { PV_PARAM_PROMOTION(fromIndex, toIndex) });
+                  UNDO_MOVE_PROMOTION_CAPTURE(board, QUEEN, color, pieceTypeTo, from, to);
+                } else {
+                  PLAY_MOVE_PROMOTION_MOVEMENT(board, QUEEN, color, from, to);
+                  SEARCH(board, NO_MOVE, NO_MOVE,
+                         color, NO_MOVE, &alpha, &beta, &bestValue,
+                         gameValue,
+                         promotionMovementEvaluation(QUEEN, color, fromIndex, toIndex),
+                         depth - 1, ply, pv, pvChild, uciData,
+                         { PV_PARAM_PROMOTION(fromIndex, toIndex) });
+                  UNDO_MOVE_PROMOTION_MOVEMENT(board, QUEEN, color, from, to);
+                  */
+                }
+            }
+            else if (color == WHITE ? enPassant & (to >> BOARD_WIDTH)
+                                  : enPassant & (to << BOARD_WIDTH)){
+                pvMove[index] = 0;
+                continue;
+                /*
+                PLAY_MOVE_EN_PASSANT(board, enPassant, color, from, to);
+                SEARCH(board, NO_MOVE, NO_MOVE,
+                       WHITE, NO_MOVE, &alpha, &beta, &bestValue,
+                       gameValue,
+                       enPassantEvaluation(enPassant, WHITE, fromIndex, toIndex),
+                       depth - 1, ply, pv, pvChild, uciData,
+                       { PV_PARAM(fromIndex, toIndex) });
+                UNDO_MOVE_EN_PASSANT(board, enPassant, WHITE, from, to);
+                */
+            } else {
+                board -> Board[color][pieceTypeFrom] ^= from | to;
+                board -> Occupied[color] ^= from | to;
+
+                if (pieceTypeTo != INVALID_PIECE_TYPE){
+                  board -> Board[!color][pieceTypeTo] &= ~to;
+                  board -> Occupied[!color] &= ~to;
+                }
+                if (pieceTypeFrom == PAWN){
+                  if (color == WHITE &&
+                      from << (BOARD_WIDTH * 2) & to){
+                        enPassant_tmp = to;
+                  }
+                  if (color == BLACK &&
+                      from >> (BOARD_WIDTH * 2) & to){
+                        enPassant_tmp = to;
+                  }
+                }
+                else if (pieceTypeFrom == ROOK){
+                  board -> RookVirgin[color] &= ~from;
+                }
+                else if (pieceTypeFrom == KING){
+                  board -> KingVirgin[color] = false;
+                  if (from >> 2 & to){
+                    board -> Board[color][ROOK] ^= to >> 1 | from >> 1;
+                    board -> Occupied[color] ^= to >> 1 | from >> 1;
+                    SEARCH(board, NO_MOVE, from | from >> 1,
+                     color, NO_MOVE, &alpha, &beta, &bestValue,
+                     gameValue,
+                     castling_OO_Evaluation(color),
+                     depth - 1, ply, pv, pvChild, uciData,
+                     { PV_PARAM(fromIndex, toIndex) });
+                  }
+                  else if (from << 2 & to){
+                    board -> Board[color][ROOK] ^= to << 2 | from << 1;
+                    board -> Occupied[color] ^= to << 2 | from << 1;
+                    SEARCH(board, NO_MOVE, from | from << 1,
+                     color, NO_MOVE, &alpha, &beta, &bestValue,
+                     gameValue,
+                     castling_OOO_Evaluation(color),
+                     depth - 1, ply, pv, pvChild, uciData,
+                     { PV_PARAM(fromIndex, toIndex) });
+                  }
+                  board -> KingVirgin[color] = kingVirgin;
+                }
+                if (pieceTypeTo != INVALID_PIECE_TYPE){
+                    SEARCH(board, NO_MOVE, NO_MOVE,
+                         color, NO_MOVE, &alpha, &beta, &bestValue,
+                         gameValue, captureEvaluation(color, pieceTypeFrom, pieceTypeTo, fromIndex, toIndex),
+                         depth - 1, ply, pv, pvChild, uciData,
+                         { PV_PARAM(fromIndex, toIndex) });
+                    board -> Board[!color][pieceTypeTo] |= to;
+                    board -> Occupied[!color] |= to;
+                } else {
+                    SEARCH(board, enPassant_tmp, NO_MOVE,
+                       color, NO_MOVE, &alpha, &beta, &bestValue,
+                       gameValue,
+                       movementEvaluation(color, pieceTypeFrom, fromIndex, toIndex),
+                       depth - 1, ply, pv, pvChild, uciData,
+                       { PV_PARAM(fromIndex, toIndex) });
+                }
+                board -> KingVirgin[color] = kingVirgin;
+                board -> RookVirgin[color] = rookVirgin;
+                board -> Board[color][pieceTypeFrom] ^= from | to;
+                board -> Occupied[color] ^= from | to;
+                ALPHA_BETA_CUT_OFF(alpha, beta, bestValue);
+            }
+        }
+      }
+    }
 
   /* Promotion
    * Capture promotion
@@ -251,7 +351,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       BITBOARD toList = pseudoMove_nonSliding(color, PAWN, fromIndex) & occupiedOpponent;                 /* If can capture some piece */
       BITBOARD to;
       while ((to = next(&toList))){                                                                       /* For all capture promotions */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);                                                               /* Convert bit board to index */
         PIECE_TYPE pieceTypeTo = identifyPiece(board, !color, to);                                        /* Check what piece is captured */
         KING_CAPTURE_ERROR(pieceTypeTo, pv);                                                              /* Terminate if king was captured */
         PLAY_MOVE_PROMOTION_CAPTURE(board, QUEEN, color, pieceTypeTo, from, to);                          /* Play the move, promote to queen */
@@ -279,7 +379,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all such pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from << BOARD_WIDTH;                                                                /* See where it will go after promotion */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);                                                               /* Convert bit board to index */
         PLAY_MOVE_PROMOTION_MOVEMENT(board, QUEEN, WHITE, from, to);                                      /* Play the move, promote to queen */
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
@@ -304,7 +404,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all such pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from >> BOARD_WIDTH;                                                                /* See where it will go after promotion */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);                                                               /* Convert bit board to index */
         PLAY_MOVE_PROMOTION_MOVEMENT(board, QUEEN, BLACK, from, to);                                      /* Promote to queen */
         if (depth == 1 || quiescence){
           SEARCH(board, NO_MOVE, NO_MOVE,
@@ -348,7 +448,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       BITBOARD to;
       CASTLING_ERROR(castling, toList, pv);
       while ((to = next(&toList))){                                                                       /* Iterate through the captures */
-        int toIndex = CONVERT(to);                                                                        /* Convert the bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }/* Convert the bit board to index */
         PIECE_TYPE pieceTypeTo = identifyPiece(board, !color, to);                                        /* Identify the captured piece */
         KING_CAPTURE_ERROR(pieceTypeTo, pv);                                                              /* Terminate if king was captured */
         PLAY_MOVE_CAPTURE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, pieceTypeTo, from, to);  /* Play the move */
@@ -401,8 +504,11 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
           if ((obstacle = RIGHT(obstacle) & occupiedOpponent & ~quiescence)){                             /* If the right most obstacle is a capture */
             int toIndex;
             PIECE_TYPE pieceTypeTo;
-            CASTLING_ERROR(castling, obstacle, pv);
-            toIndex = CONVERT(obstacle);                                                                  /* Convert bit board to index */
+            toIndex = CONVERT(obstacle);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }
+            CASTLING_ERROR(castling, obstacle, pv);                                                                 /* Convert bit board to index */
             pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
             KING_CAPTURE_ERROR(pieceTypeTo, pv);
             PLAY_MOVE_CAPTURE(board, &rookVirgin, &kingVirgin,                                            /* Play the move */
@@ -435,8 +541,11 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
           if ((obstacle = LEFT(obstacle) & occupiedOpponent & ~quiescence)){                              /* If the left most obstacle is a capture */
             int toIndex;
             PIECE_TYPE pieceTypeTo;
+            toIndex = CONVERT(obstacle);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }/* Convert bit board to index */
             CASTLING_ERROR(castling, obstacle, pv);
-            toIndex = CONVERT(obstacle);                                                                  /* Convert bit board to index */
             pieceTypeTo = identifyPiece(board, !color, obstacle);                                         /* Identify the captured piece */
             KING_CAPTURE_ERROR(pieceTypeTo, pv);
             PLAY_MOVE_CAPTURE(board, &rookVirgin, &kingVirgin,                                            /* Play the move */
@@ -471,7 +580,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[WHITE] & AN('h', '1')) &&
         !(occupied & (AN('f', '1') | AN('g', '1'))) &&
         (board -> Board[WHITE][KING] & AN('e', '1')) &&
-        (board -> Board[WHITE][ROOK] & AN('h', '1'))){
+        (board -> Board[WHITE][ROOK] & AN('h', '1')) &&
+        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 60, 62, uciData->Ply - 1))){
       board -> KingVirgin[WHITE] = false;
       board -> RookVirgin[WHITE] &= ~AN('h', '1');
       board -> Board[WHITE][KING] = AN('g', '1');
@@ -494,7 +604,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[WHITE] & AN('a', '1')) &&
         !(occupied & (AN('b', '1') | AN('c', '1') | AN('d', '1'))) &&
         (board -> Board[WHITE][KING] & AN('e', '1')) &&
-        (board -> Board[WHITE][ROOK] & AN('a', '1'))){
+        (board -> Board[WHITE][ROOK] & AN('a', '1')) &&
+        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 60, 58, uciData->Ply - 1))){
       board -> KingVirgin[WHITE] = false;
       board -> RookVirgin[WHITE] &= ~AN('a', '1');
       board -> Board[WHITE][KING] = AN('c', '1');
@@ -518,7 +629,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[BLACK] & AN('h', '8')) &&
         !(occupied & (AN('f', '8') | AN('g', '8'))) &&
         (board -> Board[BLACK][KING] & AN('e', '8')) &&
-        (board -> Board[BLACK][ROOK] & AN('h', '8'))){
+        (board -> Board[BLACK][ROOK] & AN('h', '8')) &&
+        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 4, 6, uciData->Ply - 1))){
       board -> KingVirgin[BLACK] = false;
       board -> RookVirgin[BLACK] &= ~AN('h', '8');
       board -> Board[BLACK][KING] = AN('g', '8');
@@ -541,7 +653,8 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[BLACK] & AN('a', '8')) &&
         !(occupied & (AN('b', '8') | AN('c', '8') | AN('d', '8'))) &&
         (board -> Board[BLACK][KING] & AN('e', '8')) &&
-        (board -> Board[BLACK][ROOK] & AN('a', '8'))){
+        (board -> Board[BLACK][ROOK] & AN('a', '8')) &&
+        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 4, 2, uciData->Ply - 1))){
       board -> KingVirgin[BLACK] = false;
       board -> RookVirgin[BLACK] &= ~AN('a', '8');
       board -> Board[BLACK][KING] = AN('c', '8');
@@ -579,7 +692,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       BITBOARD fromList = board -> Board[WHITE][PAWN] & pseudoMove_nonSliding(BLACK, PAWN, toIndex);      /* See what pawns can attack the destination */
       BITBOARD from;
       while ((from = next(&fromList))){                                                                   /* For all such pawns */
-        int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
+        int fromIndex = CONVERT(from);
         PLAY_MOVE_EN_PASSANT(board, enPassant, WHITE, from, to);                                          /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
@@ -596,7 +709,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       BITBOARD fromList = board -> Board[BLACK][PAWN] & pseudoMove_nonSliding(WHITE, PAWN, toIndex);      /* See pawns can attack the destination */
       BITBOARD from;
       while ((from = next(&fromList))){                                                                   /* For all such pawns */
-        int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
+        int fromIndex = CONVERT(from);
         PLAY_MOVE_EN_PASSANT(board, enPassant, BLACK, from, to);                                          /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
@@ -627,7 +740,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from << (BOARD_WIDTH * 2);                                                          /* Calculate where it will go */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
@@ -646,6 +762,9 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from >> (BOARD_WIDTH * 2);                                                          /* Calculate destination */
         int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
@@ -677,7 +796,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
                         pseudoCenter_knight(color);                                                       /* Consider only center control moves */
       BITBOARD to;
       while ((to = next(&toList))){                                                                       /* For every possible good destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, KNIGHT, from, to);                              /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -735,7 +857,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             toList = attack & pseudoCenter_sliding(color, pieceTypeFrom);                                 /* We can go anywhere */
           }
           while ((to = next(&toList))){                                                                   /* For all the destination in the list */
-            int toIndex = CONVERT(to);                                                                    /* Convert bit board to index */
+            int toIndex = CONVERT(to);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }                                                                    /* Convert bit board to index */
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -763,7 +888,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
             toList = attack & pseudoCenter_sliding(color, pieceTypeFrom);                                 /* Consider the whole attack if no obstacle */
           }
           while ((to = next(&toList))){
-            int toIndex = CONVERT(to);                                                                    /* Convert bit board to index */
+            int toIndex = CONVERT(to);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }                                                                    /* Convert bit board to index */
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -793,7 +921,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from << BOARD_WIDTH;                                                                /* Calculate destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
@@ -810,7 +941,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from >> BOARD_WIDTH;                                                                /* Calculate destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
@@ -844,7 +978,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       BITBOARD to;
       CASTLING_ERROR(castling, toList, pv);
       while ((to = next(&toList))){                                                                       /* Iterate through the moves */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                       /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -875,7 +1012,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from << (BOARD_WIDTH * 2);                                                          /* Calculate where it will go */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
@@ -893,7 +1033,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For every capable pawn */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from >> (BOARD_WIDTH * 2);                                                          /* Calculate destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, to, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
@@ -952,7 +1095,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
           }
           CASTLING_ERROR(castling, toList, pv);
           while ((to = next(&toList))){                                                                   /* For all the destination in the list */
-            int toIndex = CONVERT(to);                                                                    /* Convert bit board to index */
+            int toIndex = CONVERT(to);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }                                                                    /* Convert bit board to index */
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -981,7 +1127,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
           }
           CASTLING_ERROR(castling, toList, pv);
           while ((to = next(&toList))){
-            int toIndex = CONVERT(to);                                                                    /* Convert bit board to index */
+            int toIndex = CONVERT(to);
+            if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+                continue;
+            }                                                                    /* Convert bit board to index */
             PLAY_MOVE(board, &rookVirgin, &kingVirgin, color, pieceTypeFrom, from, to);                   /* Play the move */
             SEARCH(board, NO_MOVE, NO_MOVE,
                    color, NO_MOVE, &alpha, &beta, &bestValue,
@@ -1011,7 +1160,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from << BOARD_WIDTH;                                                                /* Calculate destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, WHITE, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                WHITE, NO_MOVE, &alpha, &beta, &bestValue,
@@ -1028,7 +1180,10 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
       while ((from = next(&fromList))){                                                                   /* For all capable pawns */
         int fromIndex = CONVERT(from);                                                                    /* Convert bit board to index */
         BITBOARD to = from >> BOARD_WIDTH;                                                                /* Calculate destination */
-        int toIndex = CONVERT(to);                                                                        /* Convert bit board to index */
+        int toIndex = CONVERT(to);
+        if (ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, fromIndex, toIndex, uciData->Ply - 1)){
+            continue;
+        }                                                                        /* Convert bit board to index */
         PLAY_MOVE(board, &rookVirgin, &kingVirgin, BLACK, PAWN, from, to);                                /* Play the move */
         SEARCH(board, NO_MOVE, NO_MOVE,
                BLACK, NO_MOVE, &alpha, &beta, &bestValue,
