@@ -275,9 +275,14 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
                 else if (pieceTypeFrom == ROOK){
                   board -> RookVirgin[color] &= ~from;
                 }
-                else if (pieceTypeFrom == KING){
-                  board -> KingVirgin[color] = false;
-                  if (from >> 2 & to){
+                else if (pieceTypeFrom == KING && ((from >>  2 & to) || (from << 2 & to))){
+                  //board -> KingVirgin[color] = false;
+                  //if (from >> 2 & to){
+                  pvMove[index] = 0;
+                  board -> Board[color][pieceTypeFrom] ^= from | to;
+                    board -> Occupied[color] ^= from | to;
+                    continue;
+                  /*
                     board -> Board[color][ROOK] ^= to >> 1 | from >> 1;
                     board -> Occupied[color] ^= to >> 1 | from >> 1;
                     SEARCH(board, NO_MOVE, from | from >> 1,
@@ -288,6 +293,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
                      { PV_PARAM(fromIndex, toIndex) });
                   }
                   else if (from << 2 & to){
+                    pvMove[index] = 0;
                     board -> Board[color][ROOK] ^= to << 2 | from << 1;
                     board -> Occupied[color] ^= to << 2 | from << 1;
                     SEARCH(board, NO_MOVE, from | from << 1,
@@ -297,7 +303,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
                      depth - 1, ply, pv, pvChild, uciData,
                      { PV_PARAM(fromIndex, toIndex) });
                   }
-                  board -> KingVirgin[color] = kingVirgin;
+                  board -> KingVirgin[color] = kingVirgin;*/
                 }
                 if (pieceTypeTo != INVALID_PIECE_TYPE){
                     SEARCH(board, NO_MOVE, NO_MOVE,
@@ -580,8 +586,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[WHITE] & AN('h', '1')) &&
         !(occupied & (AN('f', '1') | AN('g', '1'))) &&
         (board -> Board[WHITE][KING] & AN('e', '1')) &&
-        (board -> Board[WHITE][ROOK] & AN('h', '1')) &&
-        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 60, 62, uciData->Ply - 1))){
+        (board -> Board[WHITE][ROOK] & AN('h', '1'))){
       board -> KingVirgin[WHITE] = false;
       board -> RookVirgin[WHITE] &= ~AN('h', '1');
       board -> Board[WHITE][KING] = AN('g', '1');
@@ -604,8 +609,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[WHITE] & AN('a', '1')) &&
         !(occupied & (AN('b', '1') | AN('c', '1') | AN('d', '1'))) &&
         (board -> Board[WHITE][KING] & AN('e', '1')) &&
-        (board -> Board[WHITE][ROOK] & AN('a', '1')) &&
-        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 60, 58, uciData->Ply - 1))){
+        (board -> Board[WHITE][ROOK] & AN('a', '1'))){
       board -> KingVirgin[WHITE] = false;
       board -> RookVirgin[WHITE] &= ~AN('a', '1');
       board -> Board[WHITE][KING] = AN('c', '1');
@@ -629,8 +633,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[BLACK] & AN('h', '8')) &&
         !(occupied & (AN('f', '8') | AN('g', '8'))) &&
         (board -> Board[BLACK][KING] & AN('e', '8')) &&
-        (board -> Board[BLACK][ROOK] & AN('h', '8')) &&
-        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 4, 6, uciData->Ply - 1))){
+        (board -> Board[BLACK][ROOK] & AN('h', '8'))){
       board -> KingVirgin[BLACK] = false;
       board -> RookVirgin[BLACK] &= ~AN('h', '8');
       board -> Board[BLACK][KING] = AN('g', '8');
@@ -653,8 +656,7 @@ SCORE negamax(BOARD *board, BITBOARD enPassant, BITBOARD castling,              
         (board -> RookVirgin[BLACK] & AN('a', '8')) &&
         !(occupied & (AN('b', '8') | AN('c', '8') | AN('d', '8'))) &&
         (board -> Board[BLACK][KING] & AN('e', '8')) &&
-        (board -> Board[BLACK][ROOK] & AN('a', '8')) &&
-        !(ply == 0 && depth > 1 && uciData -> MoveTime != -1 && contain(pvMove, 4, 2, uciData->Ply - 1))){
+        (board -> Board[BLACK][ROOK] & AN('a', '8'))){
       board -> KingVirgin[BLACK] = false;
       board -> RookVirgin[BLACK] &= ~AN('a', '8');
       board -> Board[BLACK][KING] = AN('c', '8');
