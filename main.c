@@ -21,7 +21,7 @@
 
 /** Program details **/
 
-char stringUciName[] = "Phalp 21041604";
+char stringUciName[] = "Phalp 22032400";
 char stringUciAuthor[] = "Swastik Majumder";
 
 
@@ -211,7 +211,7 @@ int main (){
         int binc;
         int movestogo;
         if (sscanf(input, "go wtime %d btime %d winc %d binc %d movestogo %d", &wtime, &btime, &winc, &binc, &movestogo) != 5){
-            movestogo = 150;
+            movestogo = 20;
         }
         if (color == WHITE){
             moveTime = btime/movestogo;
